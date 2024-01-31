@@ -6,30 +6,19 @@ public enum GameState
     Playing, GameOver
 }
 
-public class BoardManager : MonoBehaviour
+public class BoardManager : Singleton<BoardManager>
 {
-    public static BoardManager Instance
-    {
-        get
-        {
-            if (_instance == null) _instance = FindObjectOfType<BoardManager>();
-            return _instance;
-        }
-    }
-
-    private static BoardManager _instance;
-
-    [SerializeField] int size = 4;
-    [SerializeField] Transform nodesParent;
-    [SerializeField] float animationDuration = 0.2f;
-    [SerializeField] GameState gameState;
+    [SerializeField] private int _size = 4;
+    [SerializeField] private Transform _nodesParent;
+    [SerializeField] private float _animationDuration = 0.125f;
     
-    bool hasAnyBlockMoved = false;
-    int[] randomNumbers = { 2, 4 };
+    private GameState _gameState;
+    private bool _hasAnyBlockMoved = false;
+    private readonly int[] _randomNumbers = { 2, 4 };
 
     private void Start()
     {
-        gameState = GameState.Playing;
+        _gameState = GameState.Playing;
 
         for (int i = 0; i < 2; i++)
         {
@@ -37,23 +26,23 @@ public class BoardManager : MonoBehaviour
         }
     }
 
-    void Update()
+    private void Update()
     {
-        if (gameState.Equals(GameState.Playing))
+        if (_gameState.Equals(GameState.Playing))
         {
-            if (Input.GetButtonDown("Left")) // Left Arrow or "A" Key
+            if (InputManager.Instance.GetInput("Left"))
             {
                 MoveAllToLeft();
             }
-            else if (Input.GetButtonDown("Up")) // Up Arrow or "W" Key
+            else if (InputManager.Instance.GetInput("Up"))
             {
                 MoveAllToUp();
             }
-            else if (Input.GetButtonDown("Right")) // Right Arrow or "D" Key
+            else if (InputManager.Instance.GetInput("Right"))
             {
                 MoveAllToRight();
             }
-            else if (Input.GetButtonDown("Down")) // Down Arrow or "S" Key
+            else if (InputManager.Instance.GetInput("Down"))
             {
                 MoveAllToDown();
             }
@@ -62,9 +51,9 @@ public class BoardManager : MonoBehaviour
 
     private void MoveAllToLeft()
     {
-        for (int y = 0; y < size; y++) // for each row [0,1,2,3]
+        for (int y = 0; y < _size; y++) // for each row [0,1,2,3]
         {
-            for (int x = 1; x < size; x++) // for each column except the leftmost [1,2,3]
+            for (int x = 1; x < _size; x++) // for each column except the leftmost [1,2,3]
             {
                 var currentNode = GetNodeFromBoard(x, y);
 
@@ -111,9 +100,9 @@ public class BoardManager : MonoBehaviour
 
     private void MoveAllToUp()
     {
-        for (int x = 0; x < size; x++) // for each column [0,1,2,3]
+        for (int x = 0; x < _size; x++) // for each column [0,1,2,3]
         {
-            for (int y = size - 2; y >= 0; y--) // for each row except the uppermost [2,1,0]
+            for (int y = _size - 2; y >= 0; y--) // for each row except the uppermost [2,1,0]
             {
                 var currentNode = GetNodeFromBoard(x, y);
 
@@ -122,7 +111,7 @@ public class BoardManager : MonoBehaviour
 
                 Transform targetNode = null;
 
-                for (int z = y + 1; z < size; z++)
+                for (int z = y + 1; z < _size; z++)
                 {
                     var iterNode = GetNodeFromBoard(x, z);
 
@@ -149,7 +138,7 @@ public class BoardManager : MonoBehaviour
 
                 if (targetNode == null) // if there is no target, select the uppermost
                 {
-                    targetNode = GetNodeFromBoard(x, size - 1);
+                    targetNode = GetNodeFromBoard(x, _size - 1);
                     MoveToEmptyNode(currentNode, targetNode);
                 }
             }
@@ -160,9 +149,9 @@ public class BoardManager : MonoBehaviour
 
     private void MoveAllToRight()
     {
-        for (int y = 0; y < size; y++) // for each row [0,1,2,3]
+        for (int y = 0; y < _size; y++) // for each row [0,1,2,3]
         {
-            for (int x = size - 2; x >= 0; x--) // for each column except the rightmost [2,1,0]
+            for (int x = _size - 2; x >= 0; x--) // for each column except the rightmost [2,1,0]
             {
                 var currentNode = GetNodeFromBoard(x, y);
 
@@ -171,7 +160,7 @@ public class BoardManager : MonoBehaviour
 
                 Transform targetNode = null;
 
-                for (int z = x + 1; z < size; z++)
+                for (int z = x + 1; z < _size; z++)
                 {
                     var iterNode = GetNodeFromBoard(z, y);
 
@@ -198,7 +187,7 @@ public class BoardManager : MonoBehaviour
 
                 if (targetNode == null) // if there is no target, select the rightmost
                 {
-                    targetNode = GetNodeFromBoard(size - 1, y);
+                    targetNode = GetNodeFromBoard(_size - 1, y);
                     MoveToEmptyNode(currentNode, targetNode);
                 }
             }
@@ -209,9 +198,9 @@ public class BoardManager : MonoBehaviour
 
     private void MoveAllToDown()
     {
-        for (int x = 0; x < size; x++) // for each column [0,1,2,3]
+        for (int x = 0; x < _size; x++) // for each column [0,1,2,3]
         {
-            for (int y = 1; y < size; y++) // for each row except the undermost [1,2,3]
+            for (int y = 1; y < _size; y++) // for each row except the undermost [1,2,3]
             {
                 var currentNode = GetNodeFromBoard(x, y);
 
@@ -258,16 +247,16 @@ public class BoardManager : MonoBehaviour
 
     private void CreateNumberAndCheckForGameOver()
     {
-        if (hasAnyBlockMoved && !gameState.Equals(GameState.GameOver))
+        if (_hasAnyBlockMoved && !_gameState.Equals(GameState.GameOver))
         {
-            Invoke(nameof(CreateRandomNumber), animationDuration);
-            hasAnyBlockMoved = false;
+            Invoke(nameof(CreateRandomNumber), _animationDuration);
+            _hasAnyBlockMoved = false;
         }
     }
     
     private void Move(Transform currentNode, Transform targetNode, bool merge)
     {
-        hasAnyBlockMoved = true;
+        _hasAnyBlockMoved = true;
 
         var movingBlock = currentNode.GetChild(0);
         Transform targetBlock = null;
@@ -284,7 +273,7 @@ public class BoardManager : MonoBehaviour
                 GameObject newBlock = NumberPool.Instance.GetPooledObject(newValue, targetNode, false);
                 newBlock.GetComponent<Number>().justCombined = true;
 
-                movingBlock.DOMove(targetNode.position, animationDuration).OnComplete(() =>
+                movingBlock.DOMove(targetNode.position, _animationDuration).OnComplete(() =>
                 {
                     UIManager.Instance.OnInput(newValue);
                     NumberPool.Instance.SetPooledObject(movingBlock);
@@ -292,41 +281,41 @@ public class BoardManager : MonoBehaviour
 
                     newBlock.GetComponent<Number>().justCombined = false;
                     newBlock.SetActive(true);
-                    newBlock.transform.DOPunchScale(Vector3.one * 0.15f, animationDuration, 0, 0f);
+                    newBlock.transform.DOPunchScale(Vector3.one * 0.15f, _animationDuration, 0, 0f);
                 });
             }
             else // just move
             {
-                movingBlock.DOMove(targetNode.position, animationDuration).OnComplete(() => {
+                movingBlock.DOMove(targetNode.position, _animationDuration).OnComplete(() => {
                     movingBlock.SetParent(targetNode);
                 });
             }
         }
     }
 
-    void MoveToEmptyNode(Transform currentNode, Transform targetNode)
+    private void MoveToEmptyNode(Transform currentNode, Transform targetNode)
     {
-        hasAnyBlockMoved = true;
+        _hasAnyBlockMoved = true;
 
         var movingBlock = currentNode.GetChild(0);
         movingBlock.SetParent(targetNode);
-        movingBlock.DOMove(targetNode.position, animationDuration);
+        movingBlock.DOMove(targetNode.position, _animationDuration);
     }
 
-    void CreateRandomNumber()
+    private void CreateRandomNumber()
     {
         if (IsTableFilled())
         {
             return;
         }
 
-        int randomNumber = randomNumbers[Random.Range(0, randomNumbers.Length)];
+        int randomNumber = _randomNumbers[Random.Range(0, _randomNumbers.Length)];
         bool hasCreated = false;
 
         while (!hasCreated)
         {
-            int randomX = Random.Range(0, size);
-            int randomY = Random.Range(0, size);
+            int randomX = Random.Range(0, _size);
+            int randomY = Random.Range(0, _size);
 
             Transform randomBlock = GetNodeFromBoard(randomX, randomY);
 
@@ -334,18 +323,18 @@ public class BoardManager : MonoBehaviour
             {
                 hasCreated = true;
                 GameObject newBlock = NumberPool.Instance.GetPooledObject(randomNumber, randomBlock, true);
-                newBlock.transform.DOScale(Vector3.one, animationDuration).From(Vector3.zero);
+                newBlock.transform.DOScale(Vector3.one, _animationDuration).From(Vector3.zero);
             }
         }
 
         if (IsGameOver())
         {
-            gameState = GameState.GameOver;
+            _gameState = GameState.GameOver;
             UIManager.Instance.GameOver();
         }
     }
 
-    bool AreTheNumbersEqual(Transform firstNode, Transform secondNode)
+    private bool AreTheNumbersEqual(Transform firstNode, Transform secondNode)
     {
         Transform firstBlock = firstNode.GetChild(0);
         Transform secondBlock = secondNode.GetChild(0);
@@ -353,20 +342,20 @@ public class BoardManager : MonoBehaviour
         return firstBlock.name.Equals(secondBlock.name);
     }
 
-    bool IsGameOver()
+    private bool IsGameOver()
     {
         if (!IsTableFilled())
         {
             return false;
         }
 
-        for (int x = 0; x < size; x++) // start from first column
+        for (int x = 0; x < _size; x++) // start from first column
         {
-            for (int y = 0; y < size; y++) // start from first row
+            for (int y = 0; y < _size; y++) // start from first row
             {
                 Transform currentNode = GetNodeFromBoard(x, y);
 
-                if (x + 1 < size) // check for right node
+                if (x + 1 < _size) // check for right node
                 {
                     Transform rightNode = GetNodeFromBoard(x + 1, y);
 
@@ -375,7 +364,7 @@ public class BoardManager : MonoBehaviour
                         return false;
                     }
                 }
-                if (y + 1 < size) // check for up node
+                if (y + 1 < _size) // check for up node
                 {
                     Transform upNode = GetNodeFromBoard(x, y + 1);
 
@@ -391,11 +380,11 @@ public class BoardManager : MonoBehaviour
         return true;
     }
 
-    bool IsTableFilled()
+    private bool IsTableFilled()
     {
-        for (int x = 0; x < size; x++)
+        for (int x = 0; x < _size; x++)
         {
-            for (int y = 0; y < size; y++)
+            for (int y = 0; y < _size; y++)
             {
                 if (GetNodeFromBoard(x, y).childCount.Equals(0)) // if any node has a number inside, then the game is not over
                 {
@@ -409,6 +398,6 @@ public class BoardManager : MonoBehaviour
 
     private Transform GetNodeFromBoard(int x, int y)
     {
-        return nodesParent.transform.GetChild(y * size + x);
+        return _nodesParent.transform.GetChild(y * _size + x);
     }
 }
